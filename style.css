@@ -970,74 +970,142 @@ input[type=search], .modal input, .modal select {
 }
 
 /* ===== DARK MODE (body.dark) ===== */
-body.dark { background: #0d1713; color: #e4f1ea }
-body.dark .welcome p,body.dark .date { color: #9db5aa }
-body.dark .card,body.dark .panel,body.dark .quick { background: #16261f; border: 1px solid #2b4a3c }
-body.dark .card p { color: #9db5aa }
-body.dark .card h2 { color: #4fd08a }
-body.dark .chart { border-bottom: 1px solid #2b4a3c }
-body.dark .actions button { background: #1f3a2e; color: #4fd08a }
-body.dark th,body.dark td { border-bottom: 1px solid #2b4a3c }
-body.dark th { color: #4fd08a }
-body.dark .sidebar { background: #16261f }
-body.dark .sidebar h2 { color: #4fd08a }
-body.dark .sidebar a { color: #e4f1ea; border-bottom: 1px solid #2b4a3c }
-body.dark .card small { color: #9db5aa }
-body.dark .pill { background: #1f3a2e; color: #4fd08a; border: 1px solid #2b4a3c }
-body.dark .range-label { color: #4fd08a }
-body.dark input[type=search],body.dark .modal input,body.dark .modal select { border: 1px solid #2b4a3c; background: #16261f; color: #e4f1ea }
-body.dark .modal { background: #16261f }
-body.dark .modal-head h3 { color: #4fd08a }
-body.dark .modal-head button { background: #1f3a2e; color: #4fd08a }
-body.dark .result { background: #1f3a2e }
-body.dark .note { color: #9db5aa }
-body.dark .seller-form { background: #122019; border: 1px solid #2b4a3c }
-body.dark .seller-form input,body.dark .seller-form select { border: 1.5px solid #2b4a3c }
-body.dark .list-title { color: #4fd08a }
-body.dark .mp-back { background: #1f3a2e; color: #4fd08a }
-body.dark .mp-nav button.on,body.dark .mp-shifts button.on { background: #16261f; color: #4fd08a }
-body.dark .mp-card { background: #16261f; border: 1px solid #2b4a3c }
-body.dark .mp-table th { background: #1f3a2e; color: #4fd08a }
-body.dark .mp-table td { border-bottom: 1px solid #2b4a3c }
-body.dark .mp-in { border: 1.5px solid #2b4a3c; background: #16261f; color: #e4f1ea }
-body.dark .mp-in.saved { background: #1a3027 }
-body.dark .mp-table tfoot td { background: #122019; color: #4fd08a }
-body.dark .mp-reg th.today { background: #27493a }
-body.dark .mp-rt { color: #4fd08a }
-body.dark .mp-reg .s1 { background: #16261f }
-body.dark .mp-reg .s2 { background: #16261f }
-body.dark .mp-reg thead .s1,body.dark .mp-reg thead .s2 { background: #1f3a2e }
-body.dark .mp-reg tfoot .s1,body.dark .mp-reg tfoot .s2 { background: #122019 }
-body.dark .sm-back { background: #1f3a2e; color: #4fd08a }
-body.dark .sm-card { background: #16261f; border: 1px solid #2b4a3c }
-body.dark .sm-legend { color: #4fd08a }
-body.dark .sm-field label { color: #e4f1ea }
-body.dark .sm-field input,body.dark .sm-field select { border: 1.5px solid #2b4a3c; background: #16261f; color: #e4f1ea }
-body.dark .sm-field input[readonly] { background: #122019; color: #4fd08a }
-body.dark .sm-hint { color: #9db5aa }
-body.dark .sm-link { color: #4fd08a }
-body.dark .sm-update { border: 2px solid #2b4a3c }
-body.dark .rm-tabs { background: #122019; border: 1.5px solid #2b4a3c }
-body.dark .rm-tab { color: #4fd08a }
-body.dark .rm-tag { color: #9db5aa }
-body.dark .rm-box { background: #122019; border: 1.5px solid #2b4a3c }
-body.dark .rm-check { background: #16261f; border: 1.5px solid #2b4a3c }
-body.dark .rm-check:has(input:checked) { background: #1f3a2e }
-body.dark .rm-all { background: #1f3a2e }
-body.dark .rm-cur { color: #4fd08a; background: #1f3a2e }
-body.dark .rm-check:has(input:checked) .rm-cur { background: #16261f }
-body.dark .rm-done { background: #1f3a2e; border: 1px solid #2b4a3c; color: #4fd08a }
-body.dark .ts-formula { background: #122019; color: #e4f1ea }
-body.dark .ts-formula b { color: #4fd08a }
-body.dark .pm-stat { background: #16261f; border: 1px solid #2b4a3c }
-body.dark .pm-stat p { color: #9db5aa }
-body.dark .pm-stat h4 { color: #4fd08a }
-body.dark .pm-table tfoot th { background: #122019; color: #4fd08a }
-body.dark .pm-zero td { color: #9db5aa }
-body.dark .pm-sub { color: #9db5aa }
-body.dark .pm-warn { color: #f0a066 }
-body.dark .pm-warnbox { background: #3a2d16; color: #f0b866 }
-body.dark .pm-warnbox .sm-link { color: #f0b866 }
+body.dark { background: #0d1713; color: #e4f1ea }
+
+body.dark .welcome p,body.dark .date { color: #9db5aa }
+
+body.dark .card,body.dark .panel,body.dark .quick { background: #16261f; border: 1px solid #2b4a3c }
+
+body.dark .card p { color: #9db5aa }
+
+body.dark .card h2 { color: #4fd08a }
+
+body.dark .chart { border-bottom: 1px solid #2b4a3c }
+
+body.dark .actions button { background: #1f3a2e; color: #4fd08a }
+
+body.dark th,body.dark td { border-bottom: 1px solid #2b4a3c }
+
+body.dark th { color: #4fd08a }
+
+body.dark .sidebar { background: #16261f }
+
+body.dark .sidebar h2 { color: #4fd08a }
+
+body.dark .sidebar a { color: #e4f1ea; border-bottom: 1px solid #2b4a3c }
+
+body.dark .card small { color: #9db5aa }
+
+body.dark .pill { background: #1f3a2e; color: #4fd08a; border: 1px solid #2b4a3c }
+
+body.dark .range-label { color: #4fd08a }
+
+body.dark input[type=search],body.dark .modal input,body.dark .modal select { border: 1px solid #2b4a3c; background: #16261f; color: #e4f1ea }
+
+body.dark .modal { background: #16261f }
+
+body.dark .modal-head h3 { color: #4fd08a }
+
+body.dark .modal-head button { background: #1f3a2e; color: #4fd08a }
+
+body.dark .result { background: #1f3a2e }
+
+body.dark .note { color: #9db5aa }
+
+body.dark .seller-form { background: #122019; border: 1px solid #2b4a3c }
+
+body.dark .seller-form input,body.dark .seller-form select { border: 1.5px solid #2b4a3c }
+
+body.dark .list-title { color: #4fd08a }
+
+body.dark .mp-back { background: #1f3a2e; color: #4fd08a }
+
+body.dark .mp-nav button.on,body.dark .mp-shifts button.on { background: #16261f; color: #4fd08a }
+
+body.dark .mp-card { background: #16261f; border: 1px solid #2b4a3c }
+
+body.dark .mp-table th { background: #1f3a2e; color: #4fd08a }
+
+body.dark .mp-table td { border-bottom: 1px solid #2b4a3c }
+
+body.dark .mp-in { border: 1.5px solid #2b4a3c; background: #16261f; color: #e4f1ea }
+
+body.dark .mp-in.saved { background: #1a3027 }
+
+body.dark .mp-table tfoot td { background: #122019; color: #4fd08a }
+
+body.dark .mp-reg th.today { background: #27493a }
+
+body.dark .mp-rt { color: #4fd08a }
+
+body.dark .mp-reg .s1 { background: #16261f }
+
+body.dark .mp-reg .s2 { background: #16261f }
+
+body.dark .mp-reg thead .s1,body.dark .mp-reg thead .s2 { background: #1f3a2e }
+
+body.dark .mp-reg tfoot .s1,body.dark .mp-reg tfoot .s2 { background: #122019 }
+
+body.dark .sm-back { background: #1f3a2e; color: #4fd08a }
+
+body.dark .sm-card { background: #16261f; border: 1px solid #2b4a3c }
+
+body.dark .sm-legend { color: #4fd08a }
+
+body.dark .sm-field label { color: #e4f1ea }
+
+body.dark .sm-field input,body.dark .sm-field select { border: 1.5px solid #2b4a3c; background: #16261f; color: #e4f1ea }
+
+body.dark .sm-field input[readonly] { background: #122019; color: #4fd08a }
+
+body.dark .sm-hint { color: #9db5aa }
+
+body.dark .sm-link { color: #4fd08a }
+
+body.dark .sm-update { border: 2px solid #2b4a3c }
+
+body.dark .rm-tabs { background: #122019; border: 1.5px solid #2b4a3c }
+
+body.dark .rm-tab { color: #4fd08a }
+
+body.dark .rm-tag { color: #9db5aa }
+
+body.dark .rm-box { background: #122019; border: 1.5px solid #2b4a3c }
+
+body.dark .rm-check { background: #16261f; border: 1.5px solid #2b4a3c }
+
+body.dark .rm-check:has(input:checked) { background: #1f3a2e }
+
+body.dark .rm-all { background: #1f3a2e }
+
+body.dark .rm-cur { color: #4fd08a; background: #1f3a2e }
+
+body.dark .rm-check:has(input:checked) .rm-cur { background: #16261f }
+
+body.dark .rm-done { background: #1f3a2e; border: 1px solid #2b4a3c; color: #4fd08a }
+
+body.dark .ts-formula { background: #122019; color: #e4f1ea }
+
+body.dark .ts-formula b { color: #4fd08a }
+
+body.dark .pm-stat { background: #16261f; border: 1px solid #2b4a3c }
+
+body.dark .pm-stat p { color: #9db5aa }
+
+body.dark .pm-stat h4 { color: #4fd08a }
+
+body.dark .pm-table tfoot th { background: #122019; color: #4fd08a }
+
+body.dark .pm-zero td { color: #9db5aa }
+
+body.dark .pm-sub { color: #9db5aa }
+
+body.dark .pm-warn { color: #f0a066 }
+
+body.dark .pm-warnbox { background: #3a2d16; color: #f0b866 }
+
+body.dark .pm-warnbox .sm-link { color: #f0b866 }
+
 body.dark .pm-opt { color: #9db5aa }
 body.dark { color-scheme: dark; }
 body.dark .modal input, body.dark .modal select, body.dark input[type=search],
@@ -1183,3 +1251,34 @@ body.dark .sm-link-btn { background: #1f3a2e; color: #4fd08a; }
 body.dark .mini-btn{background:#1f2937;color:#e5e7eb;border-color:#374151}
 body.dark .mini-btn.danger{color:#ff8a80;border-color:#5b2b2b}
 body.dark .btn.ghost{border-color:#374151}
+
+/* ===== Reports (PDF / Excel / Print) ===== */
+.rp-form select,.rp-form input{width:100%;margin-bottom:10px}
+.rp-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rp-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin:8px 0}
+.rp-stats>b{grid-column:1/-1;font-size:13px;color:#075b38}
+.rp-stats>div{background:#e8f5e9;border-radius:10px;padding:8px 10px}
+.rp-stats span{display:block;font-size:11px;color:#4b635a}
+.rp-stats strong{font-size:15px;color:#075b38}
+.rp-btns{display:grid;gap:8px;margin-top:12px}
+.rp-btns .btn:disabled{opacity:.5}
+body.dark .rp-stats>b,body.dark .rp-stats strong{color:#4fd08a}
+body.dark .rp-stats>div{background:#1f3a2e}
+body.dark .rp-stats span{color:#9db5aa}
+#printArea{display:none}
+@media print{
+    body.printing-report>*:not(#printArea){display:none!important}
+    body.printing-report>#printArea{display:block!important;position:static;padding:0;color:#000;background:#fff;font-family:Arial,sans-serif}
+    #printArea .pa-head h1{font-size:20px;color:#075b38;margin:0}
+    #printArea .pa-head h2{font-size:15px;margin:4px 0 6px}
+    #printArea .pa-head p{font-size:11px;margin:1px 0;color:#444}
+    #printArea table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+    #printArea th{background:#075b38!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px;text-align:left}
+    #printArea td{padding:4px 6px;border-bottom:1px solid #ccc}
+    #printArea .num{text-align:right}
+    #printArea tr.tot td{font-weight:700;background:#e8f5e9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-top:2px solid #075b38}
+    #printArea tr{page-break-inside:avoid}
+    #printArea thead{display:table-header-group}
+    #printArea .pa-sign{display:flex;justify-content:space-between;margin-top:36px;font-size:12px}
+    @page{margin:12mm}
+}
