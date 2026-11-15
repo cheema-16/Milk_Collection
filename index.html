@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#075b38">
+    <title>Cheema Milk Collection</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Cheema Milk">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+        <div>
+            <h2>Cheema Milk Collection</h2>
+            <small>Dairy Management System</small>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout ↗</button>
+    </header>
+
+    <div id="backdrop" class="backdrop" onclick="closeAll()"></div>
+
+    <!-- MORE MENU: management + tools (not used every day) -->
+    <aside id="sidebar" class="sidebar">
+        <h2>Cheema Milk</h2>
+        <button onclick="toggleMenu()">✕ Close</button>
+        <a href="#" data-action="collection">🥛 Total Collection</a>
+        <a href="#" data-action="sales">🚚 Total Sales</a>
+        <a href="#" data-action="manual">✍️ Manual Entry</a>
+        <a href="#" data-action="seller">👤 Seller</a>
+        <a href="#" data-action="buyer">🛒 Buyer</a>
+        <a href="#" data-action="addEmployee">🧑‍💼 Employee</a>
+        <a href="#" data-action="rates">📈 Rate Management</a>
+        <a href="#" data-action="print">📄 PDF / Print</a>
+        <a href="#" data-action="backup">💾 Backup</a>
+        <a href="#" data-action="system">⚙️ System</a>
+    </aside>
+
+    <!-- DASHBOARD: summary view only, no action buttons -->
+    <main class="container" id="dashPage">
+
+        <div class="welcome">
+            <div>
+                <h1>Dashboard</h1>
+                <p>Welcome back, Admin!</p>
+            </div>
+            <span class="date" id="todayDate"></span>
+        </div>
+
+        <div class="nav-row">
+            <button class="pill" id="prevWeek">← Previous Week</button>
+            <button class="pill" id="curWeek">Current Week</button>
+            <button class="pill" id="nextWeek">Next Week →</button>
+            <button class="pill" id="thisMonth">This Month</button>
+            <button class="pill" id="todayBtn">Today</button>
+        </div>
+        <div class="nav-row day-nav" id="dayNav" hidden>
+            <button class="pill" id="prevDay">← Previous Day</button>
+            <button class="pill" id="nextDay">Next Day →</button>
+        </div>
+        <p class="range-label" id="rangeLabel"></p>
+
+        <section class="hero">
+            <div>
+                <p>Total Milk Collected</p>
+                <h1 id="heroTotal">0 L</h1>
+                <small id="heroSub">Milk collected</small>
+            </div>
+            <div class="milk-icon">🥛</div>
+        </section>
+
+        <section class="stats">
+
+            <div class="card">
+                <span>🌅</span>
+                <p>Morning Milk</p>
+                <h2 id="stMorning">0 L</h2>
+                <small class="selLabel">Selected week</small>
+            </div>
+
+            <div class="card">
+                <span>🌇</span>
+                <p>Evening Milk</p>
+                <h2 id="stEvening">0 L</h2>
+                <small class="selLabel">Selected week</small>
+            </div>
+
+            <div class="card adm-only">
+                <span>💰</span>
+                <p>Today Customer Milk Amount</p>
+                <h2 id="stTodayAmt">Rs. 0</h2>
+                <small>Based on each customer's applicable rate</small>
+            </div>
+
+            <div class="card adm-only">
+                <span>📉</span>
+                <p>Today Advance Deduction</p>
+                <h2 id="stAdvance">Rs. 0</h2>
+                <small>Deducted only on the week-ending day</small>
+            </div>
+
+            <div class="card adm-only">
+                <span>🧾</span>
+                <p>Purchase Amount</p>
+                <h2 id="stPurchase">Rs. 0</h2>
+                <small class="selLabel">Selected week</small>
+            </div>
+
+            <div class="card adm-only">
+                <span>🚚</span>
+                <p>Milk Sold</p>
+                <h2 id="stSold">0 L</h2>
+                <small class="selLabel">Selected week</small>
+            </div>
+
+            <div class="card adm-only">
+                <span>📈</span>
+                <p>Estimated Profit</p>
+                <h2 id="stProfit">Rs. 0</h2>
+                <small>Sale − Purchase</small>
+            </div>
+
+            <div class="card">
+                <span>👥</span>
+                <p id="stCustLbl">Total Customers</p>
+                <h2 id="stCustomers">0</h2>
+                <small>Customers who supply milk</small>
+            </div>
+
+        </section>
+
+        <section class="panel">
+            <h3>📊 Milk Collection Overview</h3>
+            <div class="chart" id="chart"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h3>Recent Milk Entries</h3>
+                <input type="search" id="searchBox" placeholder="🔍 Search name...">
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th class="adm-only">Type</th>
+                            <th>Shift</th>
+                            <th>Milk</th>
+                            <th class="adm-only">Amount</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="entriesBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MANUAL ENTRY PAGE (rendered by JS) -->
+    <main class="container manual-page" id="manualPage" hidden></main>
+
+    <!-- SELL MILK PAGE -->
+    <main class="container sell-page" id="sellPage" hidden>
+
+        <div class="sm-top">
+            <button type="button" class="sm-back" onclick="showDashboard()">← Dashboard</button>
+            <h2>💵 Sell Milk</h2>
+        </div>
+
+        <section class="sm-hero">
+            <div>
+                <p>Milk Sale Entry</p>
+                <h3>Sell milk to a buyer</h3>
+                <small id="smStatus">🆕 New sale</small>
+            </div>
+            <div class="sm-hero-icon">🥛</div>
+        </section>
+
+        <form id="sellForm" class="sm-card" novalidate>
+
+            <!-- 1. Buyer / Milk Quality -->
+            <div class="sm-field">
+                <label for="smBuyer">Buyer / Milk Quality</label>
+                <select id="smBuyer">
+                    <option value="">-- Select buyer --</option>
+                </select>
+                <small class="sm-err" id="smErrBuyer"></small>
+                <small class="sm-hint" id="smNoBuyer" hidden>
+                    No buyers saved yet.
+                    <button type="button" class="sm-link" data-action="buyer">+ Add Buyer</button>
+                </small>
+            </div>
+
+            <!-- 2. Milk Details (3 columns) -->
+            <h4 class="sm-legend">Milk Details</h4>
+            <div class="sm-grid sm-grid3">
+                <div class="sm-field">
+                    <label for="smVolume">Today Volume</label>
+                    <input id="smVolume" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                    <small class="sm-err" id="smErrVolume"></small>
+                </div>
+                <div class="sm-field">
+                    <label for="smFat">Fat (%)</label>
+                    <input id="smFat" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                    <small class="sm-err" id="smErrFat"></small>
+                </div>
+                <div class="sm-field">
+                    <label for="smLR">LR</label>
+                    <input id="smLR" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                    <small class="sm-err" id="smErrLR"></small>
+                </div>
+            </div>
+
+            <!-- 3. Automatic Calculations (2 columns) -->
+            <h4 class="sm-legend">Automatic Calculations</h4>
+            <div class="sm-grid sm-grid2">
+                <div class="sm-field">
+                    <label for="smSnf">SNF (%)</label>
+                    <input id="smSnf" type="text" readonly placeholder="Auto">
+                </div>
+                <div class="sm-field">
+                    <label for="smTs">Total Solids (TS)</label>
+                    <input id="smTs" type="text" readonly placeholder="Auto">
+                </div>
+            </div>
+            <small class="sm-hint">SNF = (0.22 × Fat) + 0.72 + (0.25 × LR) &nbsp;·&nbsp; TS = ((SNF + Fat) × Volume) ÷ 13 &nbsp;·&nbsp; Amount = TS × Rate</small>
+
+            <!-- 5. Payment Details (2 columns) -->
+            <h4 class="sm-legend">Payment Details</h4>
+            <div class="sm-grid sm-grid2">
+                <div class="sm-field">
+                    <label for="smAmount">Today Amount (Rs)</label>
+                    <input id="smAmount" type="text" readonly placeholder="Auto">
+                </div>
+                <div class="sm-field">
+                    <label for="smRate">Rate (Rs per TS)</label>
+                    <input id="smRate" type="text" readonly placeholder="Auto" aria-describedby="smRateHint">
+                    <small class="sm-err" id="smErrRate"></small>
+                </div>
+            </div>
+            <small class="sm-hint" id="smRateHint"></small>
+            <button type="button" class="sm-link-btn" id="smRateLink">📈 Set or change the rate in Rate Management →</button>
+
+            <!-- 6. Date & Shift (2 columns) -->
+            <h4 class="sm-legend">Date &amp; Shift</h4>
+            <div class="sm-grid sm-grid2">
+                <div class="sm-field">
+                    <label for="smDate">Date</label>
+                    <input id="smDate" type="date">
+                    <small class="sm-err" id="smErrDate"></small>
+                </div>
+                <div class="sm-field">
+                    <label for="smShift">Shift</label>
+                    <select id="smShift">
+                        <option value="morning">🌅 Morning</option>
+                        <option value="evening">🌇 Evening</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 7. Action Buttons -->
+            <div class="sm-actions">
+                <button type="button" class="sm-btn sm-save" id="smSave">💾 Save Sale</button>
+                <button type="button" class="sm-btn sm-update" id="smUpdate" disabled>✏️ Update</button>
+            </div>
+
+        </form>
+    </main>
+
+    <!-- RATE MANAGEMENT PAGE -->
+    <main class="container rate-page" id="ratePage" hidden>
+
+        <div class="sm-top">
+            <button type="button" class="sm-back" onclick="showDashboard()">← Dashboard</button>
+            <h2>📈 Rate Management</h2>
+        </div>
+
+        <section class="sm-hero">
+            <div>
+                <p>Apply Rate</p>
+                <h3 id="rmHeroText">Set the purchase rate for customers</h3>
+                <small id="rmCurrent">TS rate</small>
+            </div>
+            <div class="sm-hero-icon">💰</div>
+        </section>
+
+        <form id="rateForm" class="sm-card" novalidate>
+
+            <!-- 0. Rate type: Customers Rate / Buyers Rate -->
+            <div class="rm-tabs" role="tablist">
+                <button type="button" class="rm-tab on" id="rmTabSeller">👨‍🌾 Customers Rate</button>
+                <button type="button" class="rm-tab" id="rmTabBuyer">🛒 Buyers Rate</button>
+            </div>
+
+            <!-- 1. Rate per Liter -->
+            <div class="sm-field">
+                <label for="rmRate" id="rmRateLbl">Rate per Liter (Rs.)</label>
+                <input id="rmRate" type="number" step="any" min="0" inputmode="decimal" placeholder="180"
+                    autocomplete="off">
+                <small class="sm-err" id="rmErrRate"></small>
+            </div>
+
+            <!-- 2. Rate Application Method -->
+            <div class="sm-field">
+                <label for="rmMethod">Rate Application Method</label>
+                <select id="rmMethod">
+                    <option value="range">Date Range</option>
+                    <option value="single">Single Date</option>
+                    <option value="daily">Daily</option>
+                    <option value="permanent">Permanent</option>
+                </select>
+                <small class="sm-hint" id="rmMethodHint"></small>
+            </div>
+
+            <!-- 3. Date selection (shown/hidden depending on the method) -->
+            <div class="sm-grid sm-grid2" id="rmRangeBox">
+                <div class="sm-field">
+                    <label for="rmFrom">From Date</label>
+                    <input id="rmFrom" type="date">
+                    <small class="sm-err" id="rmErrFrom"></small>
+                </div>
+                <div class="sm-field">
+                    <label for="rmTo">To Date</label>
+                    <input id="rmTo" type="date">
+                    <small class="sm-err" id="rmErrTo"></small>
+                </div>
+            </div>
+
+            <div class="sm-field" id="rmSingleBox" hidden>
+                <label for="rmDate">Date</label>
+                <input id="rmDate" type="date">
+                <small class="sm-err" id="rmErrDate"></small>
+            </div>
+
+            <!-- 4. Select Customers -->
+            <h4 class="sm-legend" id="rmLegend">Select Customers</h4>
+            <div class="rm-box">
+                <label class="rm-check rm-all">
+                    <input type="checkbox" id="rmAll">
+                    <span class="rm-name">Select All</span>
+                </label>
+                <div class="rm-list" id="rmList"></div>
+                <small class="sm-hint" id="rmNoCust" hidden>
+                    <span id="rmNoCustText">No customers saved yet.</span>
+                    <button type="button" class="sm-link" id="rmAddLink" data-action="seller">+ Add Seller</button>
+                </small>
+            </div>
+            <small class="sm-err" id="rmErrCust"></small>
+            <small class="sm-hint" id="rmCount">0 / 0 customers selected</small>
+
+            <!-- 5. Apply Rate -->
+            <div class="sm-actions">
+                <button type="button" class="sm-btn sm-save" id="rmApply">✔ Apply Rate</button>
+                <button type="button" class="sm-btn sm-update" data-action="rate">📋 TS Rate List</button>
+            </div>
+
+            <div class="rm-done" id="rmDone" hidden></div>
+        </form>
+
+        <section class="sm-card">
+            <h4 class="sm-legend">Rate History</h4>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Rate</th>
+                            <th>Method</th>
+                            <th>Period</th>
+                            <th>Applied</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rmHistory"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- TS CALCULATOR PAGE -->
+    <main class="container ts-page" id="tsPage" hidden>
+
+        <div class="sm-top">
+            <button type="button" class="sm-back" onclick="showDashboard()">← Dashboard</button>
+            <h2>🧮 TS Calculator</h2>
+        </div>
+
+        <section class="sm-hero">
+            <div>
+                <p>Total Solids</p>
+                <h3>Enter Fat, LR and Gross Volume</h3>
+                <small>SNF and TS are calculated automatically</small>
+            </div>
+            <div class="sm-hero-icon">🧮</div>
+        </section>
+
+        <form id="tsForm" class="sm-card" novalidate>
+
+            <!-- 1. Inputs -->
+            <h4 class="sm-legend">Milk Details</h4>
+            <div class="sm-grid sm-grid3">
+                <div class="sm-field">
+                    <label for="tsFat">Fat</label>
+                    <input id="tsFat" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                </div>
+                <div class="sm-field">
+                    <label for="tsLR">LR</label>
+                    <input id="tsLR" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                </div>
+                <div class="sm-field">
+                    <label for="tsGross">Gross Volume</label>
+                    <input id="tsGross" type="number" step="any" min="0" inputmode="decimal" placeholder="0.0"
+                        autocomplete="off">
+                </div>
+            </div>
+
+            <!-- 2. Automatic results -->
+            <h4 class="sm-legend">Automatic Calculations</h4>
+            <div class="sm-grid sm-grid2">
+                <div class="sm-field">
+                    <label for="tsSnf">SNF – Auto</label>
+                    <input id="tsSnf" type="text" readonly placeholder="Auto">
+                </div>
+                <div class="sm-field">
+                    <label for="tsTs">TS – Auto</label>
+                    <input id="tsTs" type="text" readonly placeholder="Auto">
+                </div>
+            </div>
+            <small class="sm-hint">Fat and LR are required for SNF. Gross Volume is also required for TS.</small>
+
+            <!-- 3. Formula -->
+            <div class="ts-formula">
+                <b>Formula</b>
+                <p>SNF = (0.22 × Fat) + 0.72 + (0.25 × LR)</p>
+                <p>TS = ((SNF + Fat) × Gross Volume) ÷ 13</p>
+            </div>
+
+            <!-- 4. Clear -->
+            <div class="sm-actions">
+                <button type="button" class="sm-btn sm-update" id="tsClear">🧹 Clear</button>
+            </div>
+        </form>
+    </main>
+
+    <!-- PAYMENT MANAGEMENT PAGE -->
+    <main class="container pay-page" id="payPage" hidden>
+
+        <div class="sm-top pm-noprint">
+            <button type="button" class="sm-back" onclick="showDashboard()">← Dashboard</button>
+            <h2>💰 Payment Management</h2>
+        </div>
+
+        <section class="sm-hero">
+            <div>
+                <p>Weekly Farmers Payment</p>
+                <h3 id="pmNet">Rs. 0</h3>
+                <small id="pmStatus">Net payable</small>
+            </div>
+            <div class="sm-hero-icon">💰</div>
+        </section>
+
+        <!-- Week navigation -->
+        <div class="nav-row pm-noprint" style="margin-top:16px">
+            <button type="button" class="pill" id="pmPrev">← Previous Week</button>
+            <button type="button" class="pill" id="pmCur">Current Week</button>
+            <button type="button" class="pill" id="pmNext">Next Week →</button>
+        </div>
+        <p class="range-label" id="pmRange"></p>
+
+        <!-- Summary -->
+        <section class="pm-stats">
+            <div class="pm-stat">
+                <p>Total Milk</p>
+                <h4 id="pmMilk">0 L</h4>
+            </div>
+            <div class="pm-stat">
+                <p>Milk Amount</p>
+                <h4 id="pmAmount">Rs. 0</h4>
+            </div>
+            <div class="pm-stat">
+                <p>Total Advance</p>
+                <h4 id="pmCut">Rs. 0</h4>
+            </div>
+            <div class="pm-stat">
+                <p>Net Payable</p>
+                <h4 id="pmNet2">Rs. 0</h4>
+            </div>
+        </section>
+
+        <!-- Farmers payment table -->
+        <section class="sm-card">
+            <h4 class="sm-legend">Farmers Payment</h4>
+            <div class="pm-warnbox" id="pmWarn" hidden>
+                <span id="pmWarnText"></span>
+                <button type="button" class="sm-link" data-action="rates">Set rate</button>
+            </div>
+            <div class="table-wrap">
+                <table class="pm-table">
+                    <thead>
+                        <tr>
+                            <th>Farmer</th>
+                            <th>Milk (L)</th>
+                            <th>Amount</th>
+                            <th>Advance</th>
+                            <th>Net Pay</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pmBody"></tbody>
+                    <tfoot id="pmFoot"></tfoot>
+                </table>
+            </div>
+            <small class="sm-hint">Amount, Advance and Net Pay are in Rs. Amount = milk collected × the farmer's rate from Rate
+                Management. Advance = the farmer's full advance balance. Net Pay = Amount − Advance (never below 0).
+                If the advance is larger than the payment, the remainder carries over to next week.</small>
+            <div class="sm-actions pm-noprint">
+                <button type="button" class="sm-btn sm-save" id="pmPrint">🖨️ Print / PDF</button>
+                <button type="button" class="sm-btn sm-update" id="pmSettle">✔ Week Settle</button>
+            </div>
+        </section>
+
+        <!-- Add advance -->
+        <form id="pmAdvForm" class="sm-card pm-noprint" novalidate>
+            <h4 class="sm-legend">Add Advance Payment</h4>
+            <div class="sm-field">
+                <label for="pmAdvSeller">Farmer</label>
+                <select id="pmAdvSeller"></select>
+                <small class="sm-hint" id="pmAdvBal"></small>
+                <small class="sm-err" id="pmErrAdvSeller"></small>
+            </div>
+            <div class="sm-grid sm-grid2">
+                <div class="sm-field">
+                    <label for="pmAdvAmount">Advance Amount (Rs)</label>
+                    <input id="pmAdvAmount" type="number" step="any" min="0" inputmode="decimal" placeholder="5000"
+                        autocomplete="off">
+                    <small class="sm-err" id="pmErrAdvAmount"></small>
+                </div>
+                <div class="sm-field">
+                    <label for="pmAdvDate">Date</label>
+                    <input id="pmAdvDate" type="date">
+                    <small class="sm-err" id="pmErrAdvDate"></small>
+                </div>
+            </div>
+            <div class="sm-field">
+                <label for="pmAdvNote">Note <span class="pm-opt">optional</span></label>
+                <input id="pmAdvNote" type="text" maxlength="60" placeholder="e.g. medical expense" autocomplete="off">
+            </div>
+            <small class="sm-hint">Every advance is added to the farmer's "Advance" total and shows in the payment table immediately.</small>
+            <div class="sm-actions">
+                <button type="button" class="sm-btn sm-save" id="pmAdvAdd">➕ Add Advance</button>
+            </div>
+        </form>
+
+        <!-- Advance history -->
+        <section class="sm-card pm-noprint">
+            <h4 class="sm-legend">Advance History</h4>
+            <div class="table-wrap">
+                <table class="pm-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Farmer</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="pmHistory"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- BOTTOM BAR: day-to-day tasks -->
+    <nav class="bottom-nav">
+        <a href="#" data-action="dashboard">🏠<small>Home</small></a>
+        <a href="#" data-action="buy">🥛<small>Buy Milk</small></a>
+        <a href="#" data-action="manual" class="emp-only" hidden>✍️<small>Manual</small></a>
+        <a href="#" data-action="collection" class="emp-only" hidden>📋<small>Collection</small></a>
+        <a href="#" data-action="sell">💵<small>Sell Milk</small></a>
+        <a href="#" data-action="payment">💰<small>Payments</small></a>
+        <a href="#" data-action="ts">🧮<small>TS Calculator</small></a>
+    </nav>
+
+    <!-- Modal -->
+    <div id="overlay" class="overlay" onclick="closeModal()"></div>
+    <div id="modal" class="modal">
+        <div class="modal-head">
+            <h3 id="modalTitle"></h3>
+            <button onclick="closeModal()">✕</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+    <script>
+        // Register the offline cache (works on https:// or localhost only)
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+
+</html>
