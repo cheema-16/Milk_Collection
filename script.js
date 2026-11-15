@@ -272,36 +272,301 @@ function saveRate() { db.settings.tsRate = +$('#tsRate').value || 12; save(); to
 
 /* Weekly farmer payments now live on the Payment Management page (below) */
 
-/* ---------- PDF / Print report ---------- */
+/* ---------- Reports: PDF / Excel / Print ---------- */
+const rp = { type: 'buy', period: 'week', from: '', to: '', mode: 'detail' };
+const RP_PERIODS = { today: 'Today', yesterday: 'Yesterday', week: 'This Week', lastweek: 'Last Week', month: 'This Month', custom: 'Custom Range' };
+const RP_TYPES = { buy: 'Milk Collection (Buy)', sell: 'Milk Sales (Sell)', all: 'Both – Collection & Sales' };
+const isNative = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const n2 = v => (Math.round(v * 100) / 100);
+
+function rpRange() {
+    const p = rp.period;
+    if (p === 'today') return getRange({ mode: 'today', offset: 0 });
+    if (p === 'yesterday') return getRange({ mode: 'today', offset: -1 });
+    if (p === 'month') return getRange({ mode: 'month', offset: 0 });
+    if (p === 'lastweek') return getRange({ mode: 'week', offset: -1 });
+    if (p === 'custom') {
+        const f = rp.from || todayStr(), t = rp.to || todayStr(), lo = f <= t ? f : t, hi = f <= t ? t : f;
+        return { label: `${lo} to ${hi}`, test: e => e.date >= lo && e.date <= hi };
+    }
+    return getRange({ mode: 'week', offset: 0 });
+}
+
+// Builds one table model used by the preview, PDF, Excel and Print outputs
+function rpModel() {
+    const r = rpRange(), all = rp.type === 'all';
+    const typeName = t => (t === 'buy' ? 'Collection' : 'Sale');
+    const who = rp.type === 'buy' ? 'Customer' : rp.type === 'sell' ? 'Buyer' : 'Name';
+    const shiftName = s => (s === 'morning' ? 'Morning' : s === 'evening' ? 'Evening' : s || '');
+    const rows = db.entries.filter(e => r.test(e) && (all || e.type === rp.type))
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.shift === b.shift ? 0 : a.shift === 'morning' ? -1 : 1) || personName(a).localeCompare(personName(b)));
+    const ts = e => saleTs(e);
+    const title = rp.type === 'buy' ? 'Milk Collection Report' : rp.type === 'sell' ? 'Milk Sales Report' : 'Milk Collection & Sales Report';
+    let cols, data, labelCol, typeCol = all ? 0 : -1;
+
+    if (rp.mode === 'summary') {
+        const g = new Map();
+        rows.forEach(e => {
+            const k = e.type + '|' + personName(e);
+            if (!g.has(k)) g.set(k, { type: e.type, name: personName(e), n: 0, l: 0, t: 0, a: 0 });
+            const x = g.get(k); x.n++; x.l += +e.litres || 0; x.t += ts(e); x.a += entryAmount(e);
+        });
+        cols = [...(all ? [{ h: 'Type', w: 10 }] : []), { h: who, w: 26 }, { h: 'Entries', w: 9, n: 0, sum: true },
+            { h: 'Litres', w: 11, n: 2, sum: true }, { h: 'TS', w: 11, n: 2, sum: true }, { h: 'Amount (Rs)', w: 14, n: 2, sum: true }];
+        data = [...g.values()].sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name))
+            .map(x => [...(all ? [typeName(x.type)] : []), x.name, x.n, n2(x.l), n2(x.t), n2(x.a)]);
+        labelCol = all ? 1 : 0;
+    } else {
+        cols = [...(all ? [{ h: 'Type', w: 10 }] : []), { h: 'Date', w: 11 }, { h: who, w: 22 }, { h: 'Shift', w: 9 },
+            { h: 'Litres', w: 9, n: 2, sum: true }, { h: 'Fat', w: 6, n: 1 }, { h: 'SNF', w: 6, n: 1 }, { h: 'LR', w: 6, n: 1 },
+            { h: 'TS', w: 9, n: 2, sum: true }, { h: 'Rate (Rs)', w: 10, n: 2 }, { h: 'Amount (Rs)', w: 13, n: 2, sum: true }];
+        data = rows.map(e => [...(all ? [typeName(e.type)] : []), e.date, personName(e), shiftName(e.shift), n2(+e.litres || 0),
+            e.fat > 0 ? +e.fat : '', e.snf > 0 ? +e.snf : '', e.lr > 0 ? +e.lr : '', n2(ts(e)), n2(entryRate(e)), n2(entryAmount(e))]);
+        labelCol = all ? 2 : 1;
+    }
+    // Totals: one row, or one per type when both are included
+    const sumIdx = cols.map((c, i) => (c.sum ? i : -1)).filter(i => i >= 0);
+    const groups = all ? [['Collection', 'Collection'], ['Sales', 'Sale']] : [['TOTAL', null]];
+    const totals = groups.map(([label, tn]) => {
+        const vals = {};
+        sumIdx.forEach(i => { vals[i] = n2(data.reduce((a, row, ri) => a + ((!tn || row[typeCol] === tn) ? (+row[i] || 0) : 0), 0)); });
+        return { label: all ? 'TOTAL ' + label.toUpperCase() : label, vals, count: data.filter(row => !tn || row[typeCol] === tn).length };
+    });
+    const sub = [`Period: ${r.label}`, `Layout: ${rp.mode === 'summary' ? 'Summary by ' + who.toLowerCase() : 'Detailed entries'}`,
+        `Generated: ${new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`];
+    const fileBase = `cheema-milk-${rp.type === 'buy' ? 'collection' : rp.type === 'sell' ? 'sales' : 'collection-sales'}-${rp.mode}-${todayStr()}`;
+    return { title, sub, cols, data, totals, labelCol, typeCol, fileBase, sheet: rp.type === 'buy' ? 'Collection' : rp.type === 'sell' ? 'Sales' : 'Report' };
+}
+
+const rpFmt = (v, c) => (typeof v === 'number' ? v.toLocaleString('en-US', { minimumFractionDigits: c.n || 0, maximumFractionDigits: c.n || 0 }) : v);
+
 function printModal() {
-    const r = getRange();
-    const rows = db.entries.filter(r.test).sort((a, b) => a.date.localeCompare(b.date));
-    openModal('📄 Report – PDF / Print', `
-        <p class="note">${r.label}</p>
-        <div class="table-wrap"><table><tr><th>Date</th><th>Name</th><th>Type</th><th>Shift</th><th>Milk</th><th>Rate</th><th>Amount</th></tr>
-        ${rows.map(e => `<tr><td>${e.date}</td><td>${esc(personName(e))}</td><td>${e.type}</td><td>${e.shift}</td><td>${lit(e.litres)}</td><td>${Math.round(entryRate(e))}</td><td>${money(entryAmount(e))}</td></tr>`).join('') || '<tr><td colspan="7">No entries in this period</td></tr>'}</table></div>
-        <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
-        <button class="btn green" onclick="exportCSV()">⬇️ Excel (CSV) Download</button>`);
+    const m = rpModel(), has = m.data.length > 0, LIM = 60;
+    const stat = (label, t) => `<div class="rp-stats">${label ? `<b>${label}</b>` : ''}
+        <div><span>Entries</span><strong>${t.count}</strong></div>
+        ${m.cols.map((c, i) => (c.sum && c.h !== 'Entries' ? `<div><span>${esc(c.h.replace(' (Rs)', ''))}</span><strong>${rpFmt(t.vals[i], c)}</strong></div>` : '')).join('')}</div>`;
+    openModal('📄 Reports – PDF / Excel / Print', `
+        <div class="rp-form">
+            <label>Report</label>
+            <select onchange="rpSet('type',this.value)">${Object.entries(RP_TYPES).map(([k, v]) => `<option value="${k}" ${rp.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            <label>Period</label>
+            <select onchange="rpSet('period',this.value)">${Object.entries(RP_PERIODS).map(([k, v]) => `<option value="${k}" ${rp.period === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            ${rp.period === 'custom' ? `<div class="rp-dates">
+                <div><label>From</label><input type="date" value="${rp.from || todayStr()}" onchange="rpSet('from',this.value)"></div>
+                <div><label>To</label><input type="date" value="${rp.to || todayStr()}" onchange="rpSet('to',this.value)"></div></div>` : ''}
+            <label>Layout</label>
+            <select onchange="rpSet('mode',this.value)">
+                <option value="detail" ${rp.mode === 'detail' ? 'selected' : ''}>Detailed – every entry</option>
+                <option value="summary" ${rp.mode === 'summary' ? 'selected' : ''}>Summary – one line per ${rp.type === 'sell' ? 'buyer' : 'customer'}</option></select>
+        </div>
+        <p class="note">${esc(m.sub[0])}</p>
+        ${m.totals.map(t => stat(rp.type === 'all' ? t.label.replace('TOTAL ', '') : '', t)).join('')}
+        <div class="table-wrap"><table><tr>${m.cols.map(c => `<th>${esc(c.h)}</th>`).join('')}</tr>
+        ${m.data.slice(0, LIM).map(r => `<tr>${r.map((v, i) => `<td>${esc(String(rpFmt(v, m.cols[i])))}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${m.cols.length}">No entries in this period</td></tr>`}</table></div>
+        ${m.data.length > LIM ? `<p class="note">Showing the first ${LIM} of ${m.data.length} rows. PDF, Excel and Print include all rows.</p>` : ''}
+        <div class="rp-btns">
+            <button class="btn" ${has ? '' : 'disabled'} onclick="rpPdf()">📄 Download PDF</button>
+            <button class="btn green" ${has ? '' : 'disabled'} onclick="rpExcel()">📊 Download Excel (.xlsx)</button>
+            ${isNative() ? '' : `<button class="btn" ${has ? '' : 'disabled'} onclick="rpPrint()">🖨️ Print</button>`}
+        </div>`);
 }
-function exportCSV() {
-    const r = getRange(), rows = db.entries.filter(r.test);
-    const csv = ['Date,Name,Type,Shift,Litres,Rate,Amount']
-        .concat(rows.map(e => [e.date, `"${personName(e)}"`, e.type, e.shift, e.litres, entryRate(e), Math.round(entryAmount(e) * 100) / 100].join(','))).join('\n');
-    download('milk-report.csv', csv, 'text/csv');
+function rpSet(k, v) { rp[k] = v; printModal(); }
+
+/* ----- Print (browser) ----- */
+function rpPrint() {
+    const m = rpModel();
+    let el = document.getElementById('printArea');
+    if (!el) { el = document.createElement('div'); el.id = 'printArea'; document.body.appendChild(el); }
+    const numCls = i => (m.cols[i].n !== undefined ? ' class="num"' : '');
+    el.innerHTML = `<div class="pa-head"><h1>🥛 Cheema Milk Collection</h1><h2>${esc(m.title)}</h2>${m.sub.map(s => `<p>${esc(s)}</p>`).join('')}</div>
+        <table><thead><tr>${m.cols.map((c, i) => `<th${numCls(i)}>${esc(c.h)}</th>`).join('')}</tr></thead>
+        <tbody>${m.data.map(r => `<tr>${r.map((v, i) => `<td${numCls(i)}>${esc(String(rpFmt(v, m.cols[i])))}</td>`).join('')}</tr>`).join('')}
+        ${m.totals.map(t => `<tr class="tot">${m.cols.map((c, i) => `<td${numCls(i)}>${i === m.labelCol ? esc(t.label) : (t.vals[i] !== undefined ? rpFmt(t.vals[i], c) : '')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        <div class="pa-sign"><span>Prepared by: ____________</span><span>Checked by: ____________</span></div>`;
+    document.body.classList.add('printing-report');
+    const done = () => { document.body.classList.remove('printing-report'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); setTimeout(done, 4000); }, 80);
 }
+
+/* ----- Excel (.xlsx, built by hand: no library needed) ----- */
+const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipStore(files) {
+    const enc = new TextEncoder(), u16 = v => [v & 255, (v >> 8) & 255], u32 = v => [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255];
+    const out = [], cen = []; let off = 0;
+    files.forEach(f => {
+        const nm = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data), sz = data.length;
+        const lh = [0x50, 0x4b, 3, 4, ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0)];
+        out.push(Uint8Array.from(lh), nm, data);
+        cen.push(Uint8Array.from([0x50, 0x4b, 1, 2, ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz),
+            ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+        off += lh.length + nm.length + sz;
+    });
+    const cs = cen.reduce((a, b) => a + b.length, 0);
+    const end = Uint8Array.from([0x50, 0x4b, 5, 6, ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
+    const parts = [...out, ...cen, end], res = new Uint8Array(parts.reduce((a, b) => a + b.length, 0));
+    let p = 0; parts.forEach(b => { res.set(b, p); p += b.length; });
+    return res;
+}
+const xmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const colLetter = i => { let s = ''; for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + ((i - 1) % 26)) + s; return s; };
+
+function buildXlsx(m) {
+    const nc = m.cols.length, rowsXml = [];
+    let r = 1;
+    const txt = (ref, v, s) => `<c r="${ref}" t="inlineStr" s="${s}"><is><t>${xmlEsc(v)}</t></is></c>`;
+    const numStyle = (c, tot) => (c.n === 2 ? (tot ? 8 : 3) : c.n === 1 ? 5 : (tot ? 9 : 4));
+    rowsXml.push(`<row r="${r}" ht="24" customHeight="1">${txt('A' + r, '🥛 Cheema Milk Collection – ' + m.title, 6)}</row>`); r++;
+    m.sub.forEach(s => { rowsXml.push(`<row r="${r}">${txt('A' + r, s, 0)}</row>`); r++; });
+    r++;
+    const headRow = r;
+    rowsXml.push(`<row r="${r}" ht="20" customHeight="1">${m.cols.map((c, i) => txt(colLetter(i) + r, c.h, 1)).join('')}</row>`); r++;
+    const first = r;
+    m.data.forEach(row => {
+        rowsXml.push(`<row r="${r}">${row.map((v, i) => {
+            const ref = colLetter(i) + r, c = m.cols[i];
+            if (typeof v === 'number') return `<c r="${ref}" s="${numStyle(c, false)}"><v>${v}</v></c>`;
+            return v === '' ? `<c r="${ref}" s="2"/>` : txt(ref, v, 2);
+        }).join('')}</row>`); r++;
+    });
+    const last = r - 1; r++;
+    m.totals.forEach(t => {
+        rowsXml.push(`<row r="${r}" ht="20" customHeight="1">${m.cols.map((c, i) => {
+            const ref = colLetter(i) + r;
+            if (i === m.labelCol) return txt(ref, t.label, 7);
+            if (t.vals[i] !== undefined) {
+                const f = m.totals.length === 1 && last >= first ? `<f>SUM(${colLetter(i)}${first}:${colLetter(i)}${last})</f>` : '';
+                return `<c r="${ref}" s="${numStyle(c, true)}">${f}<v>${t.vals[i]}</v></c>`;
+            }
+            return `<c r="${ref}" s="7"/>`;
+        }).join('')}</row>`); r++;
+    });
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="${headRow}" topLeftCell="A${headRow + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${m.cols.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.w + 3}" customWidth="1"/>`).join('')}</cols>
+<sheetData>${rowsXml.join('')}</sheetData><mergeCells count="1"><mergeCell ref="A1:${colLetter(nc - 1)}1"/></mergeCells>
+<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup orientation="landscape" fitToHeight="0"/></worksheet>`;
+    const border = '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>';
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0"/></numFmts>
+<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF075B38"/><name val="Calibri"/></font></fonts>
+<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF075B38"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8F5E9"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${border}</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="10">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="4" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="4" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="3" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+</cellXfs></styleSheet>`;
+    return zipStore([
+        { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+        { name: '_rels/.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+        { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEsc(m.sheet)}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+        { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+        { name: 'xl/styles.xml', text: styles },
+        { name: 'xl/worksheets/sheet1.xml', text: sheet }
+    ]);
+}
+function rpExcel() {
+    const m = rpModel(); if (!m.data.length) return toast('No entries to export');
+    download(m.fileBase + '.xlsx', buildXlsx(m), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('Excel file ready');
+}
+
+/* ----- PDF (built by hand: A4 landscape, Helvetica) ----- */
+function buildPdf(m) {
+    const W = 842, H = 595, M = 34, RH = 15, usable = W - 2 * M;
+    const tot = m.cols.reduce((a, c) => a + c.w, 0), cw = m.cols.map(c => c.w / tot * usable);
+    const esc1 = s => String(s).replace(/[^\x20-\x7E\xA0-\xFF]/g, '?').replace(/([\\()])/g, '\\$1');
+    const wch = ch => (/[0-9]/.test(ch) ? .556 : /[.,: ]/.test(ch) ? .278 : /[A-Z]/.test(ch) ? .667 : /[ilj|']/.test(ch) ? .24 : .5);
+    const tw = (s, z) => [...String(s)].reduce((a, ch) => a + wch(ch), 0) * z;
+    const fit = (s, w, z) => { s = String(s); if (tw(s, z) <= w) return s; while (s.length > 1 && tw(s + '..', z) > w) s = s.slice(0, -1); return s + '..'; };
+    const items = m.data.map(r => ({ r })).concat([{ gap: true }], m.totals.map(t => ({ t })));
+    const bottom = M + 24, pages = [];
+    let cur = null, y;
+    const newPage = first => { cur = []; pages.push(cur); y = H - M - (first ? 70 : 0) - RH; }; // leave room for the header row
+    newPage(true);
+    items.forEach(it => { if (y - RH - RH < bottom && !it.gap) newPage(false); if (it.gap) { y -= 6; return; } cur.push({ it, y: y - RH }); y -= RH; });
+    const green = '0.027 0.357 0.220';
+    const pageStream = (p, idx) => {
+        const s = [];
+        const text = (x, yy, str, z, bold, col) => s.push(`BT ${col || '0 g'} /F${bold ? 2 : 1} ${z} Tf ${x.toFixed(1)} ${yy.toFixed(1)} Td (${esc1(str)}) Tj ET`);
+        if (idx === 0) {
+            text(M, H - M - 14, 'Cheema Milk Collection', 18, true, green + ' rg');
+            text(M, H - M - 33, m.title, 12, true);
+            m.sub.forEach((l, i) => text(M, H - M - 46 - i * 10, l, 8.5, false, '0.35 g'));
+        }
+        const hy = (idx === 0 ? H - M - 70 : H - M) - RH;
+        s.push(`${green} rg ${M} ${hy} ${usable} ${RH} re f`);
+        let x = M;
+        m.cols.forEach((c, i) => { const t = fit(c.h, cw[i] - 6, 8.5); text(c.n !== undefined ? x + cw[i] - 3 - tw(t, 8.5) : x + 3, hy + 4.5, t, 8.5, true, '1 g'); x += cw[i]; });
+        p.forEach(({ it, y: yy }, k) => {
+            if (it.t) s.push(`0.91 0.96 0.91 rg ${M} ${yy} ${usable} ${RH} re f`);
+            else if (k % 2) s.push(`0.965 0.975 0.97 rg ${M} ${yy} ${usable} ${RH} re f`);
+            s.push(`0.8 G 0.4 w ${M} ${yy} m ${M + usable} ${yy} l S`);
+            let xx = M;
+            m.cols.forEach((c, i) => {
+                let v = it.t ? (i === m.labelCol ? it.t.label : it.t.vals[i] !== undefined ? rpFmt(it.t.vals[i], c) : '') : rpFmt(it.r[i], c);
+                v = fit(v, cw[i] - 6, 8.5);
+                text(c.n !== undefined ? xx + cw[i] - 3 - tw(v, 8.5) : xx + 3, yy + 4.5, v, 8.5, !!it.t);
+                xx += cw[i];
+            });
+        });
+        text(M, M - 4, 'Cheema Milk Collection', 7.5, false, '0.5 g');
+        const pg = `Page ${idx + 1} of ${pages.length}`; text(W - M - tw(pg, 7.5), M - 4, pg, 7.5, false, '0.5 g');
+        return s.join('\n');
+    };
+    const objs = [];
+    objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    const kids = [];
+    pages.forEach((p, i) => {
+        const st = pageStream(p, i), cid = 5 + i * 2, pid = 6 + i * 2;
+        objs[cid] = `<< /Length ${st.length} >>\nstream\n${st}\nendstream`;
+        objs[pid] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${cid} 0 R >>`;
+        kids.push(pid + ' 0 R');
+    });
+    objs[2] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
+    let out = '%PDF-1.4\n'; const off = [];
+    for (let i = 1; i < objs.length; i++) { off[i] = out.length; out += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+    const xr = out.length;
+    out += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + off.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('') +
+        `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+    return Uint8Array.from(out, c => c.charCodeAt(0) & 255);
+}
+function rpPdf() {
+    const m = rpModel(); if (!m.data.length) return toast('No entries to export');
+    download(m.fileBase + '.pdf', buildPdf(m), 'application/pdf');
+    toast('PDF ready');
+}
+
 // Saves a file. In the Android app it opens the phone's Share sheet (WhatsApp, Drive, Files...);
-// in a normal browser it downloads the file.
-async function download(name, text, type) {
+// in a normal browser it downloads the file. `data` is text or a Uint8Array.
+async function download(name, data, type) {
     try {
         const cap = window.Capacitor, P = cap && cap.Plugins;
-        if (cap && cap.isNativePlatform && cap.isNativePlatform() && P && P.Filesystem && P.Share) {
-            const r = await P.Filesystem.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+        if (isNative() && P && P.Filesystem && P.Share) {
+            let opt = { path: name, directory: 'CACHE' };
+            if (typeof data === 'string') { opt.data = data; opt.encoding = 'utf8'; }
+            else { let b = ''; for (let i = 0; i < data.length; i += 8192) b += String.fromCharCode.apply(null, data.subarray(i, i + 8192)); opt.data = btoa(b); }
+            const r = await P.Filesystem.writeFile(opt);
             await P.Share.share({ title: name, url: r.uri, dialogTitle: 'Save or send file' });
             return;
         }
     } catch (e) { if (e && /cancel/i.test(String(e.message || e))) return; }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+    a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 /* ---------- Backup ---------- */
